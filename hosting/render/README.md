@@ -38,7 +38,7 @@ continuous uptime or perpetual service. No keep-awake traffic is configured.
 2. Start Docker Desktop and export the existing local database from the checkout:
 
    ```sh
-   ./hosting/render/export-local.sh
+   sh ./hosting/render/export-local.sh
    ```
 
    The private dump stays in `.cache/cloud-export/`. The script reports database
@@ -60,7 +60,7 @@ continuous uptime or perpetual service. No keep-awake traffic is configured.
    privately in the terminal, then restore:
 
    ```sh
-   ./hosting/render/restore-neon.sh /absolute/path/to/freehire-backup.dump
+   sh ./hosting/render/restore-neon.sh /absolute/path/to/freehire-backup.dump
    ```
 
    Restore refuses a target with public tables or views. It uses a single
