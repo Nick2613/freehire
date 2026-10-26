@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: freehire
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./hosting/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MEILI_MASTER_KEY
+        generateValue: true
