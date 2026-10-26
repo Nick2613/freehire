@@ -12,7 +12,9 @@ also pass. A private backup contains 1,781 jobs and 91 source entries (about 31 
 of database storage).
 
 The GitHub hosting fork/branch and the user's free Neon PostgreSQL 18 project exist.
-Database migration and public Render deployment are still pending. Production
+The database migration is complete. Render creation is blocked by card verification;
+no Render service exists. The no-card alternative is described in
+[Railway deployment](../Railway.md). Production
 AMD64 behavior must be verified on Render; the local memory test is ARM64.
 
 ## Storage and restarts

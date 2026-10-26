@@ -6,6 +6,9 @@ set -eu
 : "${MEILI_MASTER_KEY:?Set a random MEILI_MASTER_KEY of at least 16 characters}"
 
 PUBLIC_ORIGIN=${FRONTEND_ORIGIN:-${RENDER_EXTERNAL_URL:-}}
+if [ -z "$PUBLIC_ORIGIN" ] && [ -n "${RAILWAY_PUBLIC_DOMAIN:-}" ]; then
+  PUBLIC_ORIGIN="https://$RAILWAY_PUBLIC_DOMAIN"
+fi
 case "$PUBLIC_ORIGIN" in
   https://*) ;;
   *) echo "Set FRONTEND_ORIGIN to the public HTTPS URL" >&2; exit 1 ;;
