@@ -3,6 +3,7 @@ package sources
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -109,14 +110,21 @@ func (s smartRecruiters) FetchNew(ctx context.Context, e CompanyEntry, seen func
 // listPostings pages through the board's postings, stopping when a page is empty or all
 // postings reported by totalFound have been collected.
 func (s smartRecruiters) listPostings(ctx context.Context, board string) ([]smartRecruitersPosting, error) {
+	company, keyword, err := smartRecruitersBoard(board)
+	if err != nil {
+		return nil, err
+	}
 	var postings []smartRecruitersPosting
 	for offset := 0; ; {
-		url := fmt.Sprintf("%s/%s/postings?limit=%d&offset=%d", smartRecruitersBaseURL, board, smartRecruitersPageLimit, offset)
+		listingURL := fmt.Sprintf("%s/%s/postings?limit=%d&offset=%d", smartRecruitersBaseURL, url.PathEscape(company), smartRecruitersPageLimit, offset)
+		if keyword != "" {
+			listingURL += "&q=" + url.QueryEscape(keyword)
+		}
 		var page struct {
 			TotalFound int                      `json:"totalFound"`
 			Content    []smartRecruitersPosting `json:"content"`
 		}
-		if err := s.http.GetJSON(ctx, url, &page); err != nil {
+		if err := s.http.GetJSON(ctx, listingURL, &page); err != nil {
 			return nil, fmt.Errorf("smartrecruiters: list board %s: %w", board, err)
 		}
 		if len(page.Content) == 0 {
@@ -136,7 +144,11 @@ func (s smartRecruiters) listPostings(ctx context.Context, board string) ([]smar
 // unreadableDetail marker, since the detail request is this adapter's only source for the
 // posting and a dropped one is indistinguishable from a posting taken down.
 func (s smartRecruiters) detail(ctx context.Context, e CompanyEntry, p smartRecruitersPosting) (Job, bool) {
-	url := fmt.Sprintf("%s/%s/postings/%s", smartRecruitersBaseURL, e.Board, p.ID)
+	company, _, err := smartRecruitersBoard(e.Board)
+	if err != nil {
+		return Job{}, false
+	}
+	url := fmt.Sprintf("%s/%s/postings/%s", smartRecruitersBaseURL, company, p.ID)
 
 	var d struct {
 		PostingURL      string `json:"postingUrl"`
@@ -199,6 +211,24 @@ func (s smartRecruiters) detail(ctx context.Context, e CompanyEntry, p smartRecr
 		// free-text description parse.
 		EmploymentType: smartRecruitersEmploymentType(d.TypeOfEmployment.ID),
 	}, true
+}
+
+// A shared corporate tenant can hold multiple employers. An explicit q slice
+// keeps a curated board scoped to one of them, e.g. RedBull?q=VCARB. The complete
+// board string remains its catalogue identity; detail requests use only the tenant.
+func smartRecruitersBoard(board string) (string, string, error) {
+	company, raw, scoped := strings.Cut(board, "?")
+	if company == "" || strings.ContainsAny(company, "/#:&") {
+		return "", "", fmt.Errorf("smartrecruiters: invalid company board %q", board)
+	}
+	if !scoped {
+		return company, "", nil
+	}
+	q, err := url.ParseQuery(raw)
+	if err != nil || len(q) != 1 || len(q["q"]) != 1 || strings.TrimSpace(q.Get("q")) == "" {
+		return "", "", fmt.Errorf("smartrecruiters: board %q must use one non-empty q filter", board)
+	}
+	return company, q.Get("q"), nil
 }
 
 // smartRecruitersEmploymentType maps the SmartRecruiters typeOfEmployment enum onto the
